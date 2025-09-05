@@ -24,6 +24,12 @@ resource "google_project_iam_member" "sql_client" {
   member  = "serviceAccount:${google_service_account.sa.email}"
 }
 
+resource "google_project_iam_member" "vertex_ai_user" {
+  project = var.project_id
+  role    = "roles/aiplatform.user"
+  member  = "serviceAccount:${google_service_account.sa.email}"
+}
+
 # Crear el servicio de Cloud Run, diciéndole que use la Service Account ya configurada.
 resource "google_cloud_run_v2_service" "service" {
   project  = var.project_id
