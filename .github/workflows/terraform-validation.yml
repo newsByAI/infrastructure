@@ -1,0 +1,134 @@
+name: 'Terraform PR Validation'
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - '**/*.tf'
+      - '**/*.tfvars'
+      - '**/terraform/**'
+
+env:
+  TF_VERSION: '1.5.0'
+  TERRAFORM_DIR: './infraestructure/' 
+  GCP_REGION: 'us-east-1'       
+
+jobs:
+  terraform-validate:
+    name: 'Terraform Validation & Cost Analysis'
+    runs-on: ubuntu-latest
+    
+    permissions:
+      contents: read
+      pull-requests: write
+      id-token: write
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_TERRAFORM_MAIN_KEY }}
+          project_id: ${{ secrets.GCP_PROJECT_ID }}
+
+      - name: Setup Google Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          project_id: ${{ secrets.GCP_PROJECT_ID }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+          terraform_wrapper: false
+
+      - name: Terraform Format Check
+        id: fmt
+        run: |
+          cd ${{ env.TERRAFORM_DIR }}
+          terraform fmt -check -recursive
+        continue-on-error: true
+
+      - name: Terraform Init
+        id: init
+        run: |
+          cd ${{ env.TERRAFORM_DIR }}
+          terraform init
+
+      - name: Terraform Validate
+        id: validate
+        run: |
+          cd ${{ env.TERRAFORM_DIR }}
+          terraform validate
+
+      - name: Terraform Security Scan (tfsec)
+        id: tfsec
+        uses: aquasecurity/tfsec-action@v1.0.3
+        with:
+          working_directory: ${{ env.TERRAFORM_DIR }}
+          soft_fail: true
+
+      - name: Terraform Plan
+        id: plan
+        run: |
+          cd ${{ env.TERRAFORM_DIR }}
+          terraform plan -no-color -out=tfplan.binary
+          terraform show -json tfplan.binary > tfplan.json
+        continue-on-error: true
+
+
+      - name: Upload Plan Artifact
+        uses: actions/upload-artifact@v4
+        if: steps.plan.outcome == 'success'
+        with:
+          name: terraform-plan-${{ github.event.pull_request.number }}
+          path: |
+            ${{ env.TERRAFORM_DIR }}/tfplan.binary
+            ${{ env.TERRAFORM_DIR }}/tfplan.json
+          retention-days: 30
+
+      - name: Comment PR with Results
+        uses: actions/github-script@v7
+        if: always()
+        with:
+          script: |
+            const fmt = '${{ steps.fmt.outcome }}';
+            const init = '${{ steps.init.outcome }}';
+            const validate = '${{ steps.validate.outcome }}';
+            const plan = '${{ steps.plan.outcome }}';
+            
+            let comment = `## 🏗️ Terraform Validation Results\n\n`;
+            comment += `| Step | Status |\n`;
+            comment += `|------|--------|\n`;
+            comment += `| Format | ${fmt === 'success' ? '✅' : '❌'} |\n`;
+            comment += `| Init | ${init === 'success' ? '✅' : '❌'} |\n`;
+            comment += `| Validate | ${validate === 'success' ? '✅' : '❌'} |\n`;
+            comment += `| Plan | ${plan === 'success' ? '✅' : '❌'} |\n\n`;
+            
+            if (fmt !== 'success') {
+              comment += `### ❌ Format Issues\n`;
+              comment += `Please run \`terraform fmt\` to fix formatting issues.\n\n`;
+            }
+            
+            comment += `### 📋 Plan Summary\n`;
+            comment += `The Terraform plan has been generated and uploaded as an artifact.\n`;
+            comment += `**Plan Artifact:** \`terraform-plan-${{ github.event.pull_request.number }}\`\n`;
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
+
+      - name: Validation Summary
+        if: always()
+        run: |
+          echo "## Terraform Validation Summary" >> $GITHUB_STEP_SUMMARY
+          echo "- Format: ${{ steps.fmt.outcome }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Init: ${{ steps.init.outcome }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Validate: ${{ steps.validate.outcome }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Plan: ${{ steps.plan.outcome }}" >> $GITHUB_STEP_SUMMARY
