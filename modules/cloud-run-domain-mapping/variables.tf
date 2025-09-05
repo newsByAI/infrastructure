@@ -17,3 +17,8 @@ variable "location" {
   description = "La ubicación del servicio de Cloud Run."
   type        = string
 }
+
+variable "namespace" {
+  description = "El namespace del servicio de Cloud Run (normalmente el ID del proyecto)."
+  type        = string
+}
