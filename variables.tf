@@ -36,6 +36,12 @@ variable "backend_port" {
   default     = 8080
 }
 
+variable "frontend_port" {
+  description = "El puerto que el backend expondrá."
+  type        = number
+  default     = 8080
+}
+
 
 variable "app_name" {
   description = "Prefix for resource display names"

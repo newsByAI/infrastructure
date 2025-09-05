@@ -1,11 +1,12 @@
 terraform {
   required_providers {
     google = {
-      source = "hashicorp/google"
+      source  = "hashicorp/google"
       version = "7.1.1"
     }
   }
 }
+
 locals {
   environment = terraform.workspace
 }
@@ -31,17 +32,6 @@ data "google_secret_manager_secret" "core_api_key_secret" {
   secret_id = "CORE_API_KEY"
 }
 
-# --- Base de Datos (usando el módulo) ---
-module "database" {
-  source        = "./modules/cloud-sql-postgres"
-  project_id    = var.project_id
-  region        = var.region
-  instance_name = "news-db-instance-${local.environment}"
-  database_name = "news-db-${local.environment}"
-  db_user_name  = "news-db-user-${local.environment}"
-  tier          = var.db_tier
-}
-
 # --- Backend (usando el módulo) ---
 module "backend_service" {
   source                = "./modules/cloud-run-service"
@@ -54,9 +44,12 @@ module "backend_service" {
   container_port        = var.backend_port
 
   env_vars = {
-    POSTGRES_USER      = module.database.db_user_name
-    POSTGRES_DB        = module.database.database_name
-    POSTGRES_HOST      = "/cloudsql/${module.database.instance_connection_name}"
+    POSTGRES_USER = module.database.db_user_name
+    POSTGRES_DB   = module.database.database_name
+    POSTGRES_HOST = "/cloudsql/${module.database.instance_connection_name}"
+
+    # Domain for CORS
+    DOMAIN_URL = "https://${var.custom_domain}"
 
     # Vertex AI outputs
     VERTEX_INDEX_ID    = module.vector-search.VERTEX_INDEX_ID
@@ -64,8 +57,8 @@ module "backend_service" {
     DEPLOYED_INDEX_ID  = module.vector-search.DEPLOYED_INDEX_ID
 
     # Project info
-    GCP_PROJECT_ID     = var.project_id
-    GCP_LOCATION       = var.region
+    GCP_PROJECT_ID = var.project_id
+    GCP_LOCATION   = var.region
   }
 
   secrets = {
@@ -77,27 +70,39 @@ module "backend_service" {
   }
 }
 
+# --- Base de Datos (usando el módulo) ---
+module "database" {
+  source        = "./modules/cloud-sql-postgres"
+  project_id    = var.project_id
+  region        = var.region
+  instance_name = "news-db-instance-${local.environment}"
+  database_name = "news-db-${local.environment}"
+  db_user_name  = "news-db-user-${local.environment}"
+  tier          = var.db_tier
+}
+
 # --- Frontend (usando el módulo) ---
-# module "frontend_service" {
-#   source        = "./modules/cloud-run-service"
-#   project_id    = var.project_id
-#   region        = var.region
-#   service_name  = "frontend-staging"
-#   image_url     = var.frontend_image_url
-#   internal_only = false
+module "frontend_service" {
+  source        = "./modules/cloud-run-service"
+  project_id    = var.project_id
+  region        = var.region
+  service_name  = "frontend-${local.environment}"
+  image_url     = var.frontend_image_url
+  internal_only = false
 
-#   env_vars = {
-#     BACKEND_API_URL = module.backend_service.service_url
-#   }
-# }
+  env_vars = {
+    VITE_API_BASE_URL = module.backend_service.service_url
+  }
+}
 
-# # --- Mapeo de Dominio para el Frontend (NUEVO) ---
+# --- Mapeo de Dominio para el Frontend (NUEVO) ---
 # module "domain_mapping" {
 #   source       = "./modules/cloud-run-domain-mapping"
 #   project_id   = var.project_id
 #   location     = var.region
 #   domain_name  = var.custom_domain
-#   service_name = module.frontend_service.service.name # Obtenemos el nombre del servicio del módulo frontend
+#   namespace    = var.project_id
+#   service_name = module.frontend_service.service_name # Obtenemos el nombre del servicio del módulo frontend
 # }
 
 resource "google_project_service" "vertex_ai_api" {
@@ -115,6 +120,6 @@ module "vector-search" {
   region              = var.region
   display_name_prefix = var.app_name
   machine_type        = var.vector_search_machine_type
-  dimensions = 768
+  dimensions          = 768
 
 }
