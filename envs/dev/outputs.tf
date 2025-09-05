@@ -12,5 +12,5 @@ output "frontend_custom_domain_url" {
 output "dns_records_for_godaddy" {
   description = "Registros DNS que debes configurar manualmente en GoDaddy."
   value       = module.domain_mapping.dns_records
-  sensitive   = true # Oculta los valores en la salida de la consola por defecto
+  sensitive   = true 
 }
