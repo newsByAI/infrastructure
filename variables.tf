@@ -23,3 +23,15 @@ variable "custom_domain" {
   description = "Dominio personalizado para el frontend."
   type        = string
 }
+
+variable "db_tier" {
+  description = "El tier o tamaño de la máquina para la instancia de la base de datos."
+  type        = string
+  default     = "db-perf-optimized-N-2"
+}
+
+variable "backend_port" {
+  description = "El puerto que el backend expondrá."
+  type        = number
+  default     = 8080
+}
