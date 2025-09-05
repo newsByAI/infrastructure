@@ -23,6 +23,7 @@ resource "google_vertex_ai_index" "vector_index" {
       dimensions = var.dimensions
       
       distance_measure_type = "COSINE_DISTANCE"
+      feature_norm_type = "UNIT_L2_NORM"
       shard_size = "SHARD_SIZE_SMALL"
       approximate_neighbors_count = 100
       
@@ -48,13 +49,12 @@ resource "google_vertex_ai_index_endpoint" "vector_endpoint" {
   network = var.vpc_network
 }
 
-resource "google_vertex_ai_deployed_index" "vector_deployed_index" {
-  project         = var.project_id
+resource "google_vertex_ai_index_endpoint_deployed_index" "vector_deployed_index" {
   region          = var.region
   index_endpoint  = google_vertex_ai_index_endpoint.vector_endpoint.id
   
-  deployed_index_id = "${var.display_name_prefix}-deployed"
-  display_name      = "${var.display_name_prefix}-deployed-index"
+  deployed_index_id = "${var.display_name_prefix}_deployed" 
+  display_name      = "${var.display_name_prefix}_deployed_index"
   enable_access_logging = false
   index = google_vertex_ai_index.vector_index.id
   

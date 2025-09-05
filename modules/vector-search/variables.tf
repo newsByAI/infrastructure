@@ -13,11 +13,6 @@ variable "display_name_prefix" {
   type        = string
 }
 
-variable "gcs_bucket_uri" {
-  description = "La URI del bucket de GCS para el contenido del índice (ej: 'gs://mi-bucket-vs/')."
-  type        = string
-}
-
 variable "dimensions" {
   description = "El número de dimensiones de los vectores de embedding. Por ejemplo, 768 para textembedding-gecko@003."
   type        = number

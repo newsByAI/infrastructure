@@ -14,3 +14,28 @@
 #   value       = module.domain_mapping.dns_records
 #   sensitive   = true # Oculta los valores en la salida de la consola por defecto
 # }
+
+
+# Expose Vertex AI Index ID from the module
+output "VERTEX_INDEX_ID" {
+  description = "Vertex AI index ID from the vector-search module"
+  value       = module.vector-search.VERTEX_INDEX_ID
+}
+
+# Expose Vertex AI Endpoint ID from the module
+output "VERTEX_ENDPOINT_ID" {
+  description = "Vertex AI endpoint ID from the vector-search module"
+  value       = module.vector-search.VERTEX_ENDPOINT_ID
+}
+
+# Expose Deployed Index ID from the module
+output "DEPLOYED_INDEX_ID" {
+  description = "Deployed index ID from the vector-search module"
+  value       = module.vector-search.DEPLOYED_INDEX_ID
+}
+
+# Expose GCS bucket URI from the module
+output "VECTOR_BUCKET_URI" {
+  description = "GCS bucket URI from the vector-search module"
+  value       = module.vector-search.VECTOR_BUCKET_URI
+}

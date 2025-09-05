@@ -35,3 +35,23 @@ variable "backend_port" {
   type        = number
   default     = 8080
 }
+
+
+variable "app_name" {
+  description = "Prefix for resource display names"
+  type        = string
+  default     = "news"
+}
+
+
+variable "vector_search_machine_type" {
+  description = "Machine type for the Vertex AI Index deployment"
+  type        = string
+  default     = "n1-standard-16"
+}
+
+variable "dimensions" {
+  description = "Number of dimensions for the vector embeddings"
+  type        = number
+  default     = 768
+}
