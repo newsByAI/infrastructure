@@ -11,6 +11,26 @@ locals {
 }
 
 
+data "google_secret_manager_secret" "perigon_api_key_secret" {
+  project   = var.project_id
+  secret_id = "PERIGON_API_KEY"
+}
+
+data "google_secret_manager_secret" "newsai_api_key_secret" {
+  project   = var.project_id
+  secret_id = "NEWSAI_API_KEY"
+}
+
+data "google_secret_manager_secret" "news_api_key_secret" {
+  project   = var.project_id
+  secret_id = "NEWS_API_KEY"
+}
+
+data "google_secret_manager_secret" "core_api_key_secret" {
+  project   = var.project_id
+  secret_id = "CORE_API_KEY"
+}
+
 # --- Base de Datos (usando el módulo) ---
 module "database" {
   source        = "./modules/cloud-sql-postgres"
@@ -34,23 +54,26 @@ module "backend_service" {
   container_port        = var.backend_port
 
   env_vars = {
-    # FRONTEND_URL  = module.frontend_service.service_url
-    POSTGRES_USER = module.database.db_user_name
-    POSTGRES_DB   = module.database.database_name
-    POSTGRES_HOST = "/cloudsql/${module.database.instance_connection_name}"
+    POSTGRES_USER      = module.database.db_user_name
+    POSTGRES_DB        = module.database.database_name
+    POSTGRES_HOST      = "/cloudsql/${module.database.instance_connection_name}"
+
+    # Vertex AI outputs
+    VERTEX_INDEX_ID    = module.vector-search.VERTEX_INDEX_ID
+    VERTEX_ENDPOINT_ID = module.vector-search.VERTEX_ENDPOINT_ID
+    DEPLOYED_INDEX_ID  = module.vector-search.DEPLOYED_INDEX_ID
+
+    # Project info
+    GCP_PROJECT_ID     = var.project_id
+    GCP_LOCATION       = var.region
   }
 
   secrets = {
     POSTGRES_PASSWORD = "${module.database.password_secret_name}:latest"
-    # NEWS_API_KEY       = ""
-    # CORE_API_KEY       = ""
-    # GCP_PROJECT_ID     = "enube-ai"
-    # GCP_LOCATION       = "us-central1"
-    # VERTEX_INDEX_ID    = ""
-    # VERTEX_ENDPOINT_ID = ""
-    # DEPLOYED_INDEX_ID  = ""
-    # PERIGON_API_KEY    = ""
-    # NEWSAI_API_KEY     = ""
+    PERIGON_API_KEY   = "${data.google_secret_manager_secret.perigon_api_key_secret.secret_id}:latest"
+    NEWSAI_API_KEY    = "${data.google_secret_manager_secret.newsai_api_key_secret.secret_id}:latest"
+    NEWS_API_KEY      = "${data.google_secret_manager_secret.news_api_key_secret.secret_id}:latest"
+    CORE_API_KEY      = "${data.google_secret_manager_secret.core_api_key_secret.secret_id}:latest"
   }
 }
 
