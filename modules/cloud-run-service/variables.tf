@@ -41,3 +41,9 @@ variable "secrets" {
   type        = map(string)
   default     = {}
 }
+
+variable "container_port" {
+  description = "El puerto en el contenedor que el servicio expondrá."
+  type        = number
+  default     = 8080
+}

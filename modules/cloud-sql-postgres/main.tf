@@ -23,7 +23,7 @@ resource "google_secret_manager_secret_version" "password_secret_version" {
 resource "google_sql_database_instance" "postgres_instance" {
   project          = var.project_id
   name             = var.instance_name
-  database_version = "POSTGRES_14"
+  database_version = "POSTGRES_17"
   region           = var.region
   settings {
     tier = var.tier
